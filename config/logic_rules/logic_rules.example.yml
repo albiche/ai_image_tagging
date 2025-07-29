@@ -1,0 +1,47 @@
+rules:
+  # Example 1: If a column equals a specific value, set another column
+  - if:
+      column: "Column_A"
+      equals: "SomeValue"
+    then:
+      set:
+        column: "Column_B"
+        value: "NewValue"
+
+  # Example 2: If a column is NOT equal to a value, set another column
+  - if:
+      column: "Column_X"
+      not_equals: "ValueToExclude"
+    then:
+      set:
+        column: "Column_Y"
+        value: "DefaultValue"
+
+  # Example 3: Use any_of condition (OR logic)
+  - if:
+      any_of:
+        - { column: "Column_1", equals: "Option1" }
+        - { column: "Column_2", equals: "Option2" }
+    then:
+      set:
+        column: "Column_3"
+        value: "ResultValue"
+
+  # Example 4: Use all_of condition (AND logic)
+  - if:
+      all_of:
+        - { column: "Column_A", in: ["Val1", "Val2"] }
+        - { column: "Column_B", in: ["Val3", "Val4"] }
+    then:
+      set:
+        column: "Column_C"
+        value: "CombinedResult"
+
+  # Example 5: Force a default value if condition is not met
+  - if:
+      column: "Column_Z"
+      not_equals: "ExpectedValue"
+    then:
+      set:
+        column: "Column_Z"
+        value: "DefaultValue"

@@ -1,0 +1,27 @@
+{
+  "Brand": {
+    "accepted_values": ["Value1", "Value2"],
+    "prompt_ai": "Identify if the brand belongs to Category1 or Category2.",
+    "key": "brand"
+  },
+  "Innovation": {
+    "accepted_values": ["OptionA", "OptionB", "OptionC"],
+    "prompt_ai": "Determine if the product is new, updated, or unchanged.",
+    "key": "innovation"
+  },
+  "Category": {
+    "accepted_values": ["Category1", "Category2", "Category3"],
+    "prompt_ai": "Classify the product into the correct category based on description.",
+    "key": "category"
+  },
+  "Price": {
+    "accepted_values": "Format: $0.00",
+    "prompt_ai": "Extract the price in standard format (e.g., $0.00).",
+    "key": "price"
+  },
+  "Size": {
+    "accepted_values": "Format: Volume in mL",
+    "prompt_ai": "Extract the product size in milliliters (e.g., 250 mL).",
+    "key": "size"
+  }
+}

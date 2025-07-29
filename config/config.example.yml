@@ -1,0 +1,43 @@
+# --------------------------------------------------
+#  1. Model & API
+# --------------------------------------------------
+model: vision_gpt
+openai_model: gpt-4o               # Options: gpt-4o, gpt-4-turbo, etc.
+openai_api_key: YOUR_API_KEY       # Replace with your OpenAI API key
+verify_ssl: true                   # Set to false in local dev if needed
+
+template_path: config/templates/template_pack.json  # Path to your JSON template
+
+# --------------------------------------------------
+#  2. VisionGPT Options
+# --------------------------------------------------
+video_frame_strategy: dynamic      # Options: dynamic | regular
+add_transcription: true            # Include GPT-detected text
+double_check: true                 # Second pass verification
+max_fields_per_chunk: 100          # null = unlimited
+convert_png: false
+optimize_image: true
+save_as_jpeg: false
+
+# --------------------------------------------------
+#  3. Dataset Source (Choose ONE)
+# --------------------------------------------------
+
+# --- a. Local folder ---
+# data_path: data/cases/sample_cases
+
+# --- b. CSV with URLs ---
+dataset_link:
+  path: data/csv_ref/sample.csv    # Path to your CSV file
+  column: "Asset_Link"             # Column containing URLs
+nb_max: 50                         # null = process all rows
+
+# --------------------------------------------------
+#  4. Post-processing Rules
+# --------------------------------------------------
+logic_rules_path: "config/logic_rules.yml"  # "" to disable logic rules -- optional
+
+# --------------------------------------------------
+#  5. Output
+# --------------------------------------------------
+output_path: data/predictions/output.csv
