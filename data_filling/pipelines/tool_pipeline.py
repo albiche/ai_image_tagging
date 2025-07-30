@@ -8,11 +8,17 @@ from typing import List
 from PIL import Image, ImageOps
 
 from data_filling.utils.constants import SUPPORTED_MEDIA_EXTENSIONS
+
+from PIL import Image, ImageOps
+
+import os
 import time
+import tempfile
 import requests
+from urllib.parse import unquote, urlparse
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-
+import urllib3
 
 
 # ------------------------------------------------------------------ #
@@ -52,13 +58,24 @@ def gather_media_files(row_dir: str, *, convert_png: bool) -> List[str]:
 # ------------------------------------------------------------------ #
 
 
-def download_image_tmp(url: str, retries: int = 5, backoff_factor: float = 0.5, timeout: int = 30) -> str:
-    """
-    Télécharge l'image depuis l'URL dans un fichier temporaire local,
-    avec gestion des retries et backoff.
-    """
-    import tempfile
 
+def download_image_tmp(url: str, retries: int = 5, backoff_factor: float = 0.5, timeout: int = 30,
+                       verify_ssl: bool = True) -> str:
+    """
+    Télécharge une image depuis une URL dans un fichier temporaire.
+
+    ✅ Gère :
+        - Les retries avec backoff exponentiel
+        - Les liens encodés (UPSIIDE, etc.)
+        - La détection d'extension à partir du Content-Type
+        - L'option verify_ssl (par défaut True)
+    """
+
+    # Si verify_ssl=False, désactiver les warnings
+    if not verify_ssl:
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    # Configurer la session avec stratégie de retry
     session = requests.Session()
     retry_strategy = Retry(
         total=retries,
@@ -70,21 +87,39 @@ def download_image_tmp(url: str, retries: int = 5, backoff_factor: float = 0.5, 
     session.mount("http://", adapter)
     session.mount("https://", adapter)
 
-    # Petit retry manuel sur les erreurs de lecture
+    headers = {
+        "User-Agent": "Mozilla/5.0 (compatible; ImageDownloader/1.0)"
+    }
+
     for attempt in range(1, retries + 1):
         try:
-            response = session.get(url, stream=True, timeout=timeout)
+            response = session.get(url, headers=headers, stream=True, timeout=timeout, verify=verify_ssl)
             response.raise_for_status()
 
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".tmp") as tmp_file:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
-                        tmp_file.write(chunk)
-                tmp_path = tmp_file.name
+            # Déterminer l'extension depuis Content-Type
+            content_type = response.headers.get("Content-Type", "").lower()
+            if "image" in content_type:
+                ext = "." + content_type.split("/")[-1].split(";")[0]
+            else:
+                ext = ".png"  # fallback par défaut
+
+            # Décoder le nom dans l'URL (même si encodé)
+            url_path = urlparse(url).path
+            filename = os.path.basename(unquote(url_path)) or "image"
+            filename = filename.replace(" ", "_")
+
+            # Créer un fichier temporaire avec extension correcte
+            tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=ext)
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    tmp_file.write(chunk)
+            tmp_path = tmp_file.name
+            tmp_file.close()
 
             return tmp_path
 
-        except (requests.exceptions.RequestException, requests.exceptions.ChunkedEncodingError, requests.exceptions.ConnectionError) as e:
+        except (requests.exceptions.RequestException, requests.exceptions.ChunkedEncodingError,
+                requests.exceptions.ConnectionError) as e:
             print(f"⚠️ download attempt {attempt} failed: {e}")
             if attempt < retries:
                 sleep_time = backoff_factor * (2 ** (attempt - 1))
@@ -94,10 +129,6 @@ def download_image_tmp(url: str, retries: int = 5, backoff_factor: float = 0.5, 
                 raise e
 
 
-
-import tempfile
-from PIL import Image, ImageOps
-import os
 
 
 def optimize_image(

@@ -40,7 +40,7 @@ def run_pipeline_csv(conf: dict):
 
         # 1️⃣ Téléchargement
         try:
-            img_path = download_image_tmp(url)
+            img_path = download_image_tmp(url, verify_ssl=False)
             tmp_files.append(img_path)
             print("✓ Downloaded", img_path)
         except Exception as e:
