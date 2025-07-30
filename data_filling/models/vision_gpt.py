@@ -63,7 +63,7 @@ class VisionGPTModel:
     # ------------------------------------------------------------------ #
     #  API publique
     # ------------------------------------------------------------------ #
-    def predict(self, media_paths: List[str]) -> dict:
+    def predict(self, media_paths: List[str], context: str | None = None) -> dict:
         imgs_b64 = self._images_to_b64(media_paths)
 
         wanted, na_fields = self._prepare_prompt_dict()
@@ -75,11 +75,11 @@ class VisionGPTModel:
         validated = self._split_agent.predict_fields(
             wanted,
             imgs_b64,
-            ocr_context=ocr_ctx,  # 🆕
+            ocr_context=ocr_ctx,
+            extra_context=context,  # 🆕 Ajout du paramètre
             double_check=self.conf.get("double_check", False),
             max_fields_per_chunk=self.conf.get("max_fields_per_chunk"),
         )
-
 
         validated.update(na_fields)
 
@@ -91,9 +91,8 @@ class VisionGPTModel:
                 raise TypeError("Final result is not a dict")
         except Exception as e:
             print("⚠️ post-processing failed:", e)
-            # on logue la première dizaine de clés pour debug
             print("   validated keys →", list(validated)[:10])
-            final = validated  # fallback minimal mais sûr
+            final = validated
 
         return final
 

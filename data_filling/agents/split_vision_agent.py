@@ -21,23 +21,23 @@ class SplitVisionAgent(BaseGPTAgent):
             prompt_dict: Dict,
             images_b64: List[str],
             *,
-            ocr_context: str | None = None,  # 🆕
+            ocr_context: str | None = None,
+            extra_context: str | None = None,  # 🆕
             double_check: bool = False,
             max_fields_per_chunk: int | None = None,
     ) -> Dict:
         first_pass = self._run_and_retry(
-            prompt_dict, images_b64, max_fields_per_chunk, ocr_context
+            prompt_dict, images_b64, max_fields_per_chunk, ocr_context, extra_context
         )
-
 
         if not double_check:
             return self._fill_na(prompt_dict, first_pass)
 
-        second_pass = self._run_and_retry(prompt_dict, images_b64, max_fields_per_chunk, ocr_context)
+        second_pass = self._run_and_retry(prompt_dict, images_b64, max_fields_per_chunk, ocr_context, extra_context)
         agreed, conflicts = self._compare(first_pass, second_pass, prompt_dict)
 
         if conflicts:
-            final_retry = self._run_and_retry(conflicts, images_b64, max_fields_per_chunk, ocr_context)
+            final_retry = self._run_and_retry(conflicts, images_b64, max_fields_per_chunk, ocr_context, extra_context)
             agreed.update(final_retry)
 
         return self._fill_na(prompt_dict, agreed)
@@ -51,8 +51,9 @@ class SplitVisionAgent(BaseGPTAgent):
             images_b64: List[str],
             max_fields_per_chunk: int | None,
             ocr_context: str | None = None,
+            extra_context: str | None = None,  # 🆕
     ) -> Dict:
-        validated, invalids = self._ask_chunks(fields, images_b64, max_fields_per_chunk, ocr_context)
+        validated, invalids = self._ask_chunks(fields, images_b64, max_fields_per_chunk, ocr_context, extra_context)
         print("fields", fields, "\n")
         print("ocr_context",ocr_context,"\n")
         print("validated ", validated, "\ninvalids ", invalids, "\n\n")
@@ -68,7 +69,7 @@ class SplitVisionAgent(BaseGPTAgent):
         }
 
         retry_valid, _ = self._ask_chunks(
-            invalids_prompt, images_b64, max_fields_per_chunk, ocr_context, retry=True
+            invalids_prompt, images_b64, max_fields_per_chunk, ocr_context, extra_context, retry=True
         )
 
         print("retry_valid", retry_valid)
@@ -77,18 +78,20 @@ class SplitVisionAgent(BaseGPTAgent):
 
     # ---------- découpe + GPT -----------------------------------------
     def _ask_chunks(
-        self,
-        prompt_data: Dict,
-        images_b64: List[str],
-        max_fields_per_chunk: int | None,
-        ocr_context: str | None = None,
-        *,
-        retry: bool = False,
+            self,
+            prompt_data: Dict,
+            images_b64: List[str],
+            max_fields_per_chunk: int | None,
+            ocr_context: str | None = None,
+            extra_context: str | None = None,  # 🆕
+            *,
+            retry: bool = False,
     ) -> Tuple[Dict, Dict]:
         chunks = smart_split_prompt(
             prompt_data,
             images_b64,
-            ocr_context = ocr_context,
+            ocr_context=ocr_context,
+            extra_context=extra_context,  # 🆕
             model=self._model_name,
             max_fields_per_chunk=max_fields_per_chunk,
             max_images_per_chunk=6,
@@ -101,14 +104,14 @@ class SplitVisionAgent(BaseGPTAgent):
         raw: Dict = {}
         for i, (field_chunk, img_chunk) in enumerate(chunks, 1):
             print(f"🧩 GPT {'Retry ' if retry else ''}{i}/{len(chunks)} — {len(field_chunk)} fields")
-            resp = self._call_gpt(field_chunk, img_chunk, ocr_context)
+            resp = self._call_gpt(field_chunk, img_chunk, ocr_context, extra_context)
             raw.update(resp)
 
         return self._validate_resp(raw, prompt_data)
 
     # ---------- appel GPT unique --------------------------------------
-    def _call_gpt(self, fields, images_b64, ocr_context):
-        messages = build_prompt_messages(fields, images_b64,  ocr_context=ocr_context)
+    def _call_gpt(self, fields, images_b64, ocr_context, extra_context):
+        messages = build_prompt_messages(fields, images_b64, ocr_context=ocr_context, extra_context=extra_context)
 
         try:
             response = self._chat(
