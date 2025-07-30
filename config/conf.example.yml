@@ -30,6 +30,7 @@ save_as_jpeg: false
 dataset_link:
   path: data/csv_ref/sample.csv    # Path to your CSV file
   column: "Asset_Link"             # Column containing URLs
+  column_context : ""              # To add textual context -- optional
 nb_max: 50                         # null = process all rows
 
 # --------------------------------------------------

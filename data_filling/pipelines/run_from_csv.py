@@ -1,5 +1,3 @@
-# data_filling/pipelines/run_from_csv.py
-
 import os
 import pandas as pd
 from data_filling.models import get_model
@@ -13,7 +11,8 @@ def run_pipeline_csv(conf: dict):
 
     # 📌 Config de base
     csv_path = conf["dataset_link"]["path"]
-    url_column = conf["dataset_link"]["column"]
+    url_column = conf["dataset_link"]["column"].strip()
+    context_column = conf["dataset_link"].get("column_context", "").strip()  # 🆕
     out_csv = conf["output_path"]
     nb_max = conf.get("nb_max")
     convert_png = conf.get("convert_png", False)
@@ -33,6 +32,10 @@ def run_pipeline_csv(conf: dict):
 
     for idx, row in df.iterrows():
         url = row[url_column]
+        context_text = None  # 🆕
+        if context_column and context_column in df.columns:
+            context_text = str(row[context_column]).strip() if not pd.isna(row[context_column]) else None
+
         print(f"\n========== ROW {idx} ==========")
 
         # 1️⃣ Téléchargement
@@ -64,7 +67,7 @@ def run_pipeline_csv(conf: dict):
 
         # 4️⃣ Prédiction
         try:
-            pred = model.predict([img_path])
+            pred = model.predict([img_path], context=context_text)  # 🆕 Ajout du contexte
             if not isinstance(pred, dict):
                 raise ValueError("model.predict returned non-dict")
 
